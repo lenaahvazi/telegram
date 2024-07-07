@@ -280,11 +280,7 @@ async def toggle_sensor(update: Update, context: CallbackContext) -> None:
             "status": new_state
         }
 
-        print(payload)
-
         response = requests.put(MANAGE_SENSOR_API_URL, json=payload)
-
-        print(response)
 
         if response.status_code == 200:
             new_action_text = "Turn off" if new_state else "Turn on"
