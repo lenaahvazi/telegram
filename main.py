@@ -1,7 +1,10 @@
+from apscheduler.schedulers.background import BackgroundScheduler
+import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, CallbackContext
 import config
+from helpers import register
 
 API_TOKEN = config.token
 GET_PLACES_BY_USERNAME_API = config.getPlacesByUsernameAPI
@@ -10,6 +13,11 @@ GET_SENSOR_MEASUREMENT_API = config.getSensorMeasurementAPI
 GET_PLACE_ADMIN_API = config.getPlaceAdminAPI
 MANAGE_SENSORS_API = config.manageSensorsAPI
 MANAGE_SINGLE_SENSOR_API = config.manageSingleSensorAPI
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+scheduler = BackgroundScheduler()
 
 
 async def start(update: Update, context: CallbackContext) -> None:
@@ -292,7 +300,7 @@ async def toggle_sensor(update: Update, context: CallbackContext) -> None:
         await query.message.reply_text("Failed to retrieve sensor states.")
 
 
-def main() -> None:
+def telegram_bot_start() -> None:
     application = Application.builder().token(API_TOKEN).build()
 
     application.add_handler(CommandHandler('start', start))
@@ -311,5 +319,26 @@ def main() -> None:
     application.run_polling()
 
 
-if __name__ == '__main__':
-    main()
+def start_scheduler():
+    if not scheduler.running:
+        logger.info("Starting scheduler...")
+        registerInterval = config.registerInterval
+
+        scheduler.add_job(register, 'interval', seconds=registerInterval, id='register_job')
+
+        scheduler.start()
+        logger.info("Scheduler started.")
+    else:
+        logger.info("Scheduler already running.")
+
+
+if __name__ == "__main__":
+    try:
+        response, code = register()
+
+        if code == 200:
+            start_scheduler()
+            telegram_bot_start()
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
