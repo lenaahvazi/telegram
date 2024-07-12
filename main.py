@@ -1,14 +1,15 @@
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, CallbackContext
+import config
 
-API_TOKEN = '7103008469:AAEd0QyoCEUEsWzCnFsvbHR7mt0orLxawoo'
-API1_URL = 'http://142.93.110.148:7000/places/by-username'
-REPORT_URL = 'http://142.93.110.148:7020/api/v1/download_report'
-SENSORS_API_URL = 'http://142.93.110.148:6000/historical/data'
-ADMINS_API_URL = 'http://142.93.110.148:7000/user/by-place-id'
-MANAGE_SENSORS_API_URL = 'http://142.93.110.148:7000/get-sensors-by-place-id'
-MANAGE_SENSOR_API_URL = 'http://142.93.110.148:7000/sensor/manage'
+API_TOKEN = config.token
+GET_PLACES_BY_USERNAME_API = config.getPlacesByUsernameAPI
+GET_REPORT_API = config.getReportAPI
+GET_SENSOR_MEASUREMENT_API = config.getSensorMeasurementAPI
+GET_PLACE_ADMIN_API = config.getPlaceAdminAPI
+MANAGE_SENSORS_API = config.manageSensorsAPI
+MANAGE_SINGLE_SENSOR_API = config.manageSingleSensorAPI
 
 
 async def start(update: Update, context: CallbackContext) -> None:
@@ -21,7 +22,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 
     context.user_data['username'] = username
 
-    response = requests.get(f"{API1_URL}?adminUsername={username}")
+    response = requests.get(f"{GET_PLACES_BY_USERNAME_API}?adminUsername={username}")
 
     if response.status_code != 200:
         await update.message.reply_text("No places found for your username. Please contact the administrator.")
@@ -95,7 +96,7 @@ async def back_to_places(update: Update, context: CallbackContext) -> None:
 
     username = context.user_data['username']
 
-    response = requests.get(f"{API1_URL}?adminUsername={username}")
+    response = requests.get(f"{GET_PLACES_BY_USERNAME_API}?adminUsername={username}")
     places = response.json()
 
     keyboard = [
@@ -135,7 +136,7 @@ async def download_report(update: Update, context: CallbackContext) -> None:
 
     await query.message.reply_text("Generating the report, please wait...")
 
-    response = requests.get(REPORT_URL, stream=True)
+    response = requests.get(GET_REPORT_API, stream=True)
 
     if response.status_code == 200:
         file_name = "report.pdf"
@@ -183,7 +184,7 @@ async def read_sensor_data(update: Update, context: CallbackContext) -> None:
         'limit': 1
     }
 
-    response = requests.get(SENSORS_API_URL, params)
+    response = requests.get(GET_SENSOR_MEASUREMENT_API, params)
 
     if response.status_code == 200:
         data = response.json()
@@ -209,7 +210,7 @@ async def fetch_admins(update: Update, context: CallbackContext) -> None:
         'placeID': place_id
     }
 
-    response = requests.get(ADMINS_API_URL, params)
+    response = requests.get(GET_PLACE_ADMIN_API, params)
 
     if response.status_code == 200:
         admins = response.json()
@@ -235,7 +236,7 @@ async def manage_sensors(update: Update, context: CallbackContext) -> None:
         'placeID': place_id
     }
 
-    response = requests.get(MANAGE_SENSORS_API_URL, params)
+    response = requests.get(MANAGE_SENSORS_API, params)
 
     if response.status_code == 200:
         sensor_states = response.json()
@@ -268,7 +269,7 @@ async def toggle_sensor(update: Update, context: CallbackContext) -> None:
         'placeID': place_id
     }
 
-    response = requests.get(MANAGE_SENSORS_API_URL, params)
+    response = requests.get(MANAGE_SENSORS_API, params)
     if response.status_code == 200:
         sensor_states = response.json()
         current_state = sensor_states.get(sensor_name)
@@ -280,7 +281,7 @@ async def toggle_sensor(update: Update, context: CallbackContext) -> None:
             "status": new_state
         }
 
-        response = requests.put(MANAGE_SENSOR_API_URL, json=payload)
+        response = requests.put(MANAGE_SINGLE_SENSOR_API, json=payload)
 
         if response.status_code == 200:
             new_action_text = "Turn off" if new_state else "Turn on"
