@@ -142,9 +142,13 @@ async def download_report(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     await query.answer()
 
-    await query.message.reply_text("Generating the report, please wait...")
+    place_id = context.user_data.get('placeID')
+    params = {
+        'place_id': place_id
+    }
 
-    response = requests.get(GET_REPORT_API, stream=True)
+    await query.message.reply_text("Generating the report, please wait...")
+    response = requests.get(GET_REPORT_API, params=params, stream=True)
 
     if response.status_code == 200:
         file_name = "report.pdf"
